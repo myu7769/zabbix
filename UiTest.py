@@ -2,10 +2,12 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk, scrolledtext
 from zabbixHost import *
 from tkinter.simpledialog import askstring
+from config import Config
+from login_dialog import LoginDialog
 
 ZABBIX_GLOBAL_URL = ''
-COMMON = 'http://ncsma.ncsoft.net/zabbix/api_jsonrpc.php'
-GAME = 'http://ncsma.ncsoft.net/zabbix-game/api_jsonrpc.php'
+COMMON = Config.COMMON_URL
+GAME = Config.GAME_URL
 
 class CheckableTreeview(ttk.Treeview):
     def __init__(self, master=None, **kw):
@@ -190,7 +192,7 @@ def get_host_ips():
         messagebox.showerror("오류", "호스트를 선택해주세요.")
         return
 
-    token = zabbix_login(ZABBIX_GLOBAL_URL, username, password)
+    token = zabbix_login(ZABBIX_GLOBAL_URL, global_username, global_password)
     get_hosts_count = 0
     try:
         for item in tree.checked_items():
@@ -245,7 +247,7 @@ def activate_selected_hosts():
     
     # 성공과 실패를 추적하기 위한 딕셔너리 초기화
     results_summary = {'success': [], 'fail': [] , 'msg' : []}
-    token = zabbix_login(ZABBIX_GLOBAL_URL, username, password)
+    token = zabbix_login(ZABBIX_GLOBAL_URL, global_username, global_password)
 
     try:
         for item in tree.checked_items():
@@ -291,7 +293,7 @@ def deactivate_selected_hosts():
     
     # 성공과 실패를 추적하기 위한 딕셔너리 초기화
     results_summary = {'success': [], 'fail': [] , 'msg' : []}
-    token = zabbix_login(ZABBIX_GLOBAL_URL, username, password)
+    token = zabbix_login(ZABBIX_GLOBAL_URL, global_username, global_password)
 
     try:
         for item in tree.checked_items():
@@ -343,7 +345,7 @@ def delete_selected_hosts_api():
     response = messagebox.askokcancel("확인 요청", "계속 진행하시겠습니까?")
     if response:  # 사용자가 '확인'을 선택한 경우
         print("사용자가 확인을 선택했습니다.")
-        token = zabbix_login(ZABBIX_GLOBAL_URL, username, password)        
+        token = zabbix_login(ZABBIX_GLOBAL_URL, global_username, global_password)        
         try:
             for item in tree.checked_items():
                 hostname, ip = tree.item(item, 'values')
@@ -404,7 +406,7 @@ def create_zabbix_maintenance():
     main_hostgroups = [ ]
 
     try:
-        token = zabbix_login(ZABBIX_GLOBAL_URL, username, password)
+        token = zabbix_login(ZABBIX_GLOBAL_URL, global_username, global_password)
         hostGroups = e6.get().split()
         hostGroup = readGroupId(ZABBIX_GLOBAL_URL, token, hostGroups)
         hostGroupIds = [groupIds[1] for groupIds in hostGroup]
@@ -489,7 +491,7 @@ def confirm_and_call_api():
     if not ZABBIX_GLOBAL_URL:
         messagebox.showerror("URL 확인", "Zabbix common or game ?")
         return
-    token = zabbix_login(ZABBIX_GLOBAL_URL, username, password)
+    token = zabbix_login(ZABBIX_GLOBAL_URL, global_username, global_password)
     
     if not tree.checked_items():
         messagebox.showerror("오류", "호스트를 선택해주세요.")
@@ -597,6 +599,24 @@ def main():
     root = tk.Tk()
     root.title("Zabbix 호스트 관리")
     root.geometry("800x400")  # 기존보다 너비를 늘려서 버튼을 수용합니다.
+    
+    # 로그인 다이얼로그 표시
+    login_dialog = LoginDialog(root)
+    login_result = login_dialog.show()
+    
+    # 로그인이 취소되면 애플리케이션 종료
+    if not login_result:
+        root.destroy()
+        return
+    
+    # 로그인 정보 저장
+    global ZABBIX_GLOBAL_URL
+    ZABBIX_GLOBAL_URL, username, password = login_result
+    
+    # 전역 변수로 사용자 정보 저장
+    global global_username, global_password
+    global_username = username
+    global_password = password
 
     frame_top = tk.Frame(root)
     # frame_top.pack(expand=True, fill='both')  
